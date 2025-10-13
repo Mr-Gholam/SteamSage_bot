@@ -78,7 +78,7 @@
 import os
 from dotenv import load_dotenv
 import telebot
-from langchain_bot import chat_with_langchain
+from Scripts.langchain_bot import chat_with_langchain
 
 load_dotenv()
 telegram_api = os.getenv("TELEGRAM_API")

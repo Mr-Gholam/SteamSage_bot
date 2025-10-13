@@ -115,22 +115,41 @@ def recommend_based_on_content(title, title_df, sim_df):
     recommendations = sorted_scores[sorted_scores.index != game_id].head(5)
     return [title_df.loc[i]['title'] for i in recommendations.index]
 
-# ----------- 5. Build Models and Save to PKL -----------
+# ----------- 5. Hybrid Recommender -----------
+def recommend_hybrid(title, pt, collab_sim_matrix, title_df, content_sim_df):
+    # Try collaborative first
+    recs_collab = recommend_based_on_collaborative(title, pt, collab_sim_matrix)
+    # If collaborative has results, return them (or merge with content-based)
+    if recs_collab:
+        # Optionally, merge with content-based and remove duplicates
+        recs_content = recommend_based_on_content(title, title_df, content_sim_df)
+        # Merge, keeping order: collaborative first, then unique from content
+        seen = set(recs_collab)
+        merged = recs_collab + [g for g in recs_content if g not in seen]
+        return merged[:5]
+    # If no collaborative, fallback to content-based
+    else:
+        recs_content = recommend_based_on_content(title, title_df, content_sim_df)
+        return recs_content
+
+# ----------- 6. Build Models and Save to PKL -----------
 if recommendation is not None and games is not None:
     pt, collab_sim_matrix = collaborative_setup(games, recommendation)
     title_df, content_sim_df = content_setup(games)
 
     # Save collaborative filtering objects
-    with open('collaborative_recommender.pkl', 'wb') as f:
+    with open('Pkl/collaborative_recommender.pkl', 'wb') as f:
         pickle.dump({'pt': pt, 'collab_sim_matrix': collab_sim_matrix}, f)
 
     # Save content-based filtering objects
-    with open('content_recommender.pkl', 'wb') as f:
+    with open('Pkl/content_recommender.pkl', 'wb') as f:
         pickle.dump({'title_df': title_df, 'content_sim_df': content_sim_df}, f)
 
-    print("Saved collaborative_recommender.pkl and content_recommender.pkl!")
+
+    print("Saved collaborative_recommender.pkl, content_recommender.pkl !")
 
     # Example usage (comment out for production)
     print("Collaborative:", recommend_based_on_collaborative("Just Cause™ 3", pt, collab_sim_matrix))
     print("Content-based:", recommend_based_on_content('BRINK: Agents of Change', title_df, content_sim_df))
+    print("Hybrid:", recommend_hybrid("Just Cause™ 3", pt, collab_sim_matrix, title_df, content_sim_df))
     print("DONE")

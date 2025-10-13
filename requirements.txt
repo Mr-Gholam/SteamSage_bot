@@ -3,3 +3,5 @@ numpy
 scikit-learn
 langdetect
 scipy
+selenium
+Pillow

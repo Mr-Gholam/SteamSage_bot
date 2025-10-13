@@ -1,6 +1,6 @@
 from langchain_community.llms import Ollama
 from langchain.prompts import ChatPromptTemplate
-from recommender import collaborative
+from Scripts.recommender import collaborative
 
 # 🔹 Initialize Ollama LLM (make sure Ollama is running and model is pulled, e.g., "llama2" or "mistral")
 llm = Ollama(model="llama3.2")  # You can change "llama2" to any other Ollama model you have
