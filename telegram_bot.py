@@ -78,7 +78,7 @@
 import os
 from dotenv import load_dotenv
 import telebot
-from Scripts.langchain_bot import chat_with_langchain
+# from Scripts.langchain_bot import chat_with_langchain
 
 load_dotenv()
 telegram_api = os.getenv("TELEGRAM_API")
@@ -86,14 +86,25 @@ if telegram_api is None:
     raise ValueError("TELEGRAM_API environment variable is not set.")
 bot = telebot.TeleBot(telegram_api)
 
+
 @bot.message_handler(commands=["start"])
 def send_welcome(msg):
     bot.reply_to(msg, "👋 Hi! I’m GameBot. Ask me for game recommendations!")
 
-@bot.message_handler(func=lambda m: True)
-def handle_message(msg):
-    reply = chat_with_langchain(msg.text)
-    bot.reply_to(msg, reply)
+
+@bot.message_handler(commands=["Dota2_stat"])
+def send_info(msg):
+    print(msg.text)
+    bot.reply_to(msg, "👋this is information :)")
+
+
+# @bot.message_handler(func=lambda m: True)
+# def handle_message(msg):
+#     reply = chat_with_langchain(msg.text)
+#     bot.reply_to(
+#         msg, reply if reply is not None else "Sorry, I couldn't generate a response."
+#     )
+
 
 print("app is running ")
 bot.infinity_polling()

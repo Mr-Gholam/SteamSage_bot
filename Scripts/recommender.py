@@ -80,13 +80,13 @@ def hybrid(name):
 # ---- Example Usage ----
 # Uncomment to test in your environment
 
-game_name = "dota"
-print("Collaborative Recommendations for:", game_name)
-print(collaborative(game_name))
+# game_name = "dota"
+# print("Collaborative Recommendations for:", game_name)
+# print(collaborative(game_name))
 
-title = "dota"
-print("Content-Based Recommendations for:", title)
-print(content_based(title))
+# title = "dota"
+# print("Content-Based Recommendations for:", title)
+# print(content_based(title))
 
-print("Hybrid Recommendations for:", game_name)
-print(hybrid(game_name))
+# print("Hybrid Recommendations for:", game_name)
+# print(hybrid(game_name))
