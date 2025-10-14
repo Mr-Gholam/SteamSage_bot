@@ -56,8 +56,8 @@ def get_top_hero_img(pos=None):
     bottom = top + size["height"]
     im = im.crop((left, top, right, bottom))
     photo_name = str(pos) + "_top_" + datetime.now().strftime("%H%M%S")
-    im.save(f"Photo/{photo_name}.png")
-    photo_url = f"Photo/{photo_name}.png"
+    im.save(f"photo/{photo_name}.png")
+    photo_url = f"photo/{photo_name}.png"
     return photo_url
 
 
@@ -83,9 +83,7 @@ def send_dota2_stat(text):
     }
     for pos, keywords in switch.items():
         if any(re.search(keyword, text, re.IGNORECASE) for keyword in keywords):
-            print(switch[pos][0])
             return [f"Top Heroes by Win Rate({switch[pos][0]})", get_top_hero_img(pos)]
-    # Optionally, return None or a default value if no match found
     return [
         "Sorry, I couldn't identify the position.\n"
         "Please specify one of the following Dota positions:\n"

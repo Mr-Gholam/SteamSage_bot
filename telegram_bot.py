@@ -78,7 +78,9 @@
 import os
 from dotenv import load_dotenv
 import telebot
+
 # from Scripts.langchain_bot import chat_with_langchain
+from Scripts.DotaProTracker import send_dota2_stat
 
 load_dotenv()
 telegram_api = os.getenv("TELEGRAM_API")
@@ -94,8 +96,21 @@ def send_welcome(msg):
 
 @bot.message_handler(commands=["Dota2_stat"])
 def send_info(msg):
-    print(msg.text)
-    bot.reply_to(msg, "👋this is information :)")
+    result = send_dota2_stat(msg.text)
+
+    if result[1]:
+        try:
+            with open(result[1], "rb") as photo:
+                bot.send_photo(msg.chat.id, photo, caption=result[0])
+        except FileNotFoundError:
+            bot.reply_to(
+                msg.chat.id,
+                "Sorry, the image file was not found at the specified path.",
+            )
+        except Exception as e:
+            bot.reply_to(msg.chat.id, f"An error occurred while sending the photo: {e}")
+    else:
+        bot.send_message(msg.chat.id, result[0])
 
 
 # @bot.message_handler(func=lambda m: True)
