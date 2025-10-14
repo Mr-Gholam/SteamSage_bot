@@ -81,6 +81,7 @@ import telebot
 
 # from Scripts.langchain_bot import chat_with_langchain
 from Scripts.DotaProTracker import send_dota2_stat
+from Scripts.music import lyrics
 
 load_dotenv()
 telegram_api = os.getenv("TELEGRAM_API")
@@ -95,7 +96,7 @@ def send_welcome(msg):
 
 
 @bot.message_handler(commands=["Dota2_stat"])
-def send_info(msg):
+def send_dota_stat(msg):
     result = send_dota2_stat(msg.text)
 
     if result[1]:
@@ -111,6 +112,27 @@ def send_info(msg):
             bot.reply_to(msg.chat.id, f"An error occurred while sending the photo: {e}")
     else:
         bot.send_message(msg.chat.id, result[0])
+
+
+@bot.message_handler(commands=["music"])
+def send_music(msg):
+    try:
+        with open("music/soad.jpg", "rb") as photo:
+            cover = bot.send_photo(msg.chat.id, photo, caption=lyrics)
+        with open("music/soad- Vicinity Of Obscenity.mp3", "rb") as music:
+            bot.send_audio(
+                msg.chat.id,
+                music,
+                caption="System Of A Down - Vicinity Of Obscenity",
+                reply_to_message_id=cover.message_id,
+            )
+    except FileNotFoundError:
+        bot.send_message(
+            msg.chat.id,
+            "Sorry, the music file was not found at the specified path.",
+        )
+    except Exception as e:
+        bot.send_message(msg.chat.id, f"An error occurred while sending the music: {e}")
 
 
 # @bot.message_handler(func=lambda m: True)
