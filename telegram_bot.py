@@ -78,10 +78,10 @@
 import os
 from dotenv import load_dotenv
 import telebot
+from telebot import types
 
-# from Scripts.langchain_bot import chat_with_langchain
-from Scripts.DotaProTracker import send_dota2_stat
-from Scripts.music import lyrics
+from Scripts import send_dota2_stat, delete_img,lyrics,create_tts,delete_tts
+
 
 load_dotenv()
 telegram_api = os.getenv("TELEGRAM_API")
@@ -92,7 +92,10 @@ bot = telebot.TeleBot(telegram_api)
 
 @bot.message_handler(commands=["start"])
 def send_welcome(msg):
-    bot.reply_to(msg, "👋 Hi! I’m GameBot. Ask me for game recommendations!")
+    tts = types.InlineKeyboardButton('text to speech', callback_data='TTS')
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(tts)
+    bot.reply_to(msg, "Hi! I’m GameBot. Ask me for game recommendations!",reply_markup=keyboard)
 
 
 @bot.message_handler(commands=["Dota2_stat"])
@@ -137,10 +140,45 @@ def send_music(msg):
 
 # @bot.message_handler(func=lambda m: True)
 # def handle_message(msg):
+#     tts = types.InlineKeyboardButton('text to speech', callback_data='TTS')
+#     keyboard = types.InlineKeyboardMarkup()
+#     keyboard.add(tts)
 #     reply = chat_with_langchain(msg.text)
 #     bot.reply_to(
-#         msg, reply if reply is not None else "Sorry, I couldn't generate a response."
+#         msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
+#         reply_markup=keyboard
 #     )
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    if call.data == "TTS":
+        text = call.message.text
+        username = call.from_user.username
+        messageId= call.message.message_id
+        chat_id = str(call.message.chat.id)
+        fileAddress = create_tts(text,username,messageId)
+        try:
+            with open(fileAddress, "rb") as tts:
+             bot.send_voice(
+                chat_id,
+                tts,
+                reply_to_message_id=messageId,
+            )
+            delete_tts(fileAddress)
+        except FileNotFoundError:
+                bot.send_message(
+                chat_id,
+                "Sorry, the text to speech file was not found at the specified path.",
+            )
+        except Exception as e:
+            bot.send_message(chat_id, f"An error occurred while sending the music: {e}")
+            # bot.send_audio(chat_id,fileAddress)
+            # bot.send_message(call.message.chat.id, "Recommend a Game")
+        
+    elif call.data == "bar":
+        bot.answer_callback_query(call.id, "Answer is bar")
+
 
 
 print("app is running ")
