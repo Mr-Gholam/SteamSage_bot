@@ -96,6 +96,7 @@ def send_welcome(msg):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(tts)
     bot.reply_to(msg, "Hi! I’m GameBot. Ask me for game recommendations!",reply_markup=keyboard)
+    # print(msg.chat.username)
 
 
 @bot.message_handler(commands=["Dota2_stat"])
