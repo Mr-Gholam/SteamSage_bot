@@ -6,6 +6,7 @@ from datetime import datetime
 from PIL import Image
 import io
 import re
+import os
 
 
 def get_top_hero_img(pos=None):
@@ -94,3 +95,7 @@ def send_dota2_stat(text):
         "- Hard Support (pos5)\n",
         "",
     ]
+
+
+def delete_img(filename):
+    os.remove(filename)
