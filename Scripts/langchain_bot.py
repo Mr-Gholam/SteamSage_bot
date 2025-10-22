@@ -66,4 +66,3 @@ def chat_with_langchain(user_input: str):
     return chain.invoke({"user_input": user_input})
 
 
-print(chat_with_langchain("Recommend dota by content "))

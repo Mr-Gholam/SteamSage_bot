@@ -1,86 +1,14 @@
-# import telebot
-# from dotenv import load_dotenv
-# from telebot import types
-# import requests
-# import os
-
-# load_dotenv()
-
-# TELEGRAM_KEY = os.getenv("TELEGRAM_API")
-# RAWG_KEY = os.getenv("RAWG_APIKEY")
-
-# # Replace 'YOUR_API_TOKEN' with your actual bot token
-# bot = telebot.TeleBot(TELEGRAM_KEY)
-
-# @bot.message_handler(commands=['start'])
-# def start(message):
-#     button_recommender = types.InlineKeyboardButton('Recommend a Game', callback_data='recommend')
-#     button_Contact = types.InlineKeyboardButton('Contact Admin', callback_data='contact')
-#     button_About = types.InlineKeyboardButton('About Me', callback_data='about')
-#     button_Info = types.InlineKeyboardButton('Game Info', callback_data='gameInfo')
-
-#     keyboard = types.InlineKeyboardMarkup()
-#     keyboard.add(button_recommender)
-#     keyboard.add(button_Contact)
-#     keyboard.add(button_About)
-#     keyboard.add(button_Info)
-
-#     bot.send_message(message.chat.id, "Welcome to Game Recommendation Bot \n How can i help you ?  ", reply_markup=keyboard)
-
-# @bot.callback_query_handler(func=lambda call: True)
-# def callback_query(call):
-#     if call.data == "recommend":
-#         bot.send_message(call.message.chat.id, "Recommend a Game")
-#         bot.delete_message(call.message.chat.id, call.message.id)
-#     if call.data == "contact":
-#         bot.send_message(call.message.chat.id, "Contact Admin")
-#         bot.delete_message(call.message.chat.id, call.message.id)
-#     if call.data == "about":
-#         bot.send_message(call.message.chat.id, "About Me")
-#         bot.delete_message(call.message.chat.id, call.message.id)
-#     if call.data == "gameInfo":
-#         markup = types.ForceReply(selective=False)
-#         bot.send_message(call.message.chat.id, "What is the name of the game?",reply_markup=markup)
-#     elif call.data == "bar":
-#         bot.answer_callback_query(call.id, "Answer is bar")
-
-
-# #Bottom 1
-# @bot.message_handler(func=lambda message: message.text == "Bottom 1")
-# def button1(message):
-#     bot.send_message(message.chat.id, "U select bottom 1")
-
-# #Bottom 2
-# @bot.message_handler(func=lambda message: message.text == "Bottom 2")
-# def button2(message):
-#     bot.send_message(message.chat.id, "U select bottom 2")
-
-
-# @bot.message_handler(commands=['info'])
-# def send_info(message):
-#     bot.reply_to(message, "This is a simple Telegram bot implemented in Python.")
-
-# @bot.message_handler(func=lambda message: True)
-# def echo_all(message):
-#     if (
-#         message.reply_to_message is not None and
-#         message.reply_to_message.text == "What is the name of the game?"
-#     ):
-#         r = requests.get(f"https://api.rawg.io/api/games?key={RAWG_KEY}&search={message.text}")
-#         data = r.json()
-#         bot.send_photo(message.chat.id, data["results"][0]["background_image"], caption="test")
-#     else:
-#         bot.reply_to(message, message.text)
-
-# bot.polling()
-
 
 import os
 from dotenv import load_dotenv
 import telebot
 from telebot import types
+import asyncio
 
-from Scripts import send_dota2_stat, delete_img,lyrics,create_tts,delete_tts
+from Scripts import send_dota2_stat, delete_img,lyrics,create_tts,delete_tts,Database,chat_with_langchain,translator_function
+
+db = Database("Database/users.db")
+db.create_database()
 
 
 load_dotenv()
@@ -92,11 +20,15 @@ bot = telebot.TeleBot(telegram_api)
 
 @bot.message_handler(commands=["start"])
 def send_welcome(msg):
+    username= msg.chat.username
+    # 0 = English
+    # 1 = French
+    lang = 0 
+    db.create_user(username,lang)
     tts = types.InlineKeyboardButton('text to speech', callback_data='TTS')
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(tts)
     bot.reply_to(msg, "Hi! I’m GameBot. Ask me for game recommendations!",reply_markup=keyboard)
-    # print(msg.chat.username)
 
 
 @bot.message_handler(commands=["Dota2_stat"])
@@ -138,17 +70,38 @@ def send_music(msg):
     except Exception as e:
         bot.send_message(msg.chat.id, f"An error occurred while sending the music: {e}")
 
+@bot.message_handler(commands=["change_language"])
+def change_lang(msg):
+    try:
+        newLang = db.change_user_lang(msg.chat.username)
+        response=""
+        if newLang ==1 :
+            response = f"Language has been changed from English to french"
+        else:
+           response = "Language has been changed from French to English"
+        bot.send_message(msg.chat.id,response)
+    except Exception as e:
+        bot.send_message(msg.chat.id, f"An error occurred while sending the music: {e}")
 
-# @bot.message_handler(func=lambda m: True)
-# def handle_message(msg):
-#     tts = types.InlineKeyboardButton('text to speech', callback_data='TTS')
-#     keyboard = types.InlineKeyboardMarkup()
-#     keyboard.add(tts)
-#     reply = chat_with_langchain(msg.text)
-#     bot.reply_to(
-#         msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
-#         reply_markup=keyboard
-#     )
+
+@bot.message_handler(func=lambda m: True)
+def handle_message(msg):
+    lang = db.get_user_lang(msg.chat.username)
+    tts = types.InlineKeyboardButton('text to speech', callback_data='TTS')
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(tts)
+    reply = chat_with_langchain(msg.text)
+    if lang == 1 :
+        reply = asyncio.run(translator_function(reply))
+        bot.reply_to(
+            msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
+            reply_markup=keyboard
+        )
+    else:
+        bot.reply_to(
+            msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
+            reply_markup=keyboard
+        )
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -158,7 +111,8 @@ def callback_query(call):
         username = call.from_user.username
         messageId= call.message.message_id
         chat_id = str(call.message.chat.id)
-        fileAddress = create_tts(text,username,messageId)
+        lang = db.get_user_lang(username)
+        fileAddress = create_tts(text,username,messageId,lang)
         try:
             with open(fileAddress, "rb") as tts:
              bot.send_voice(

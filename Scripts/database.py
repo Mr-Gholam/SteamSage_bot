@@ -1,70 +1,88 @@
 import sqlite3
-
-# Connect to a file-based database (creates if it doesn't exist)
-# conn = sqlite3.connect("Database/users.db")
-
-# # Connect to an in-memory database
-# # conn = sqlite3.connect(':memory:')
-# cursor = conn.cursor()
-# cursor.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, lang INTEGER NOT NULL CHECK (lang IN (0, 1)) )")
-# cursor.execute("INSERT INTO users (name, lang) VALUES ('Alice', True)")
-# conn.commit()
-
-# cursor.execute("SELECT * FROM users")
-# rows = cursor.fetchall()
-# for row in rows:
-#     print(row)
+from typing import Optional, Tuple, Any
 
 
 class Database:
-    def __init__(self, url):
+    def __init__(self, url: str):
         self.url = url
-        self.conn = None
-        self.cursor = None
 
-    def create_database(self):
-        self.conn = sqlite3.connect(self.url)
-        self.cursor = self.conn.cursor()
-        # Check whether the 'users' table exists
-        self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-        if self.cursor.fetchone():
-            print("table exists")
-            return
-        else:
-            # create the table if it doesn't exist
-            print("creating users table")
-            self.cursor.execute(
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, lang INTEGER NOT NULL CHECK (lang IN (0, 1)) )"
-            )
-            self.conn.commit()
+    def create_database(self) -> None:
+        """
+        Create the SQLite database and users table if it doesn't exist.
+        Opens and closes its own connection to avoid cross-thread SQLite errors.
+        """
+        try:
+            with sqlite3.connect(self.url, check_same_thread=False) as conn:
+                cursor = conn.cursor()
+                # create the table if it doesn't exist (atomic and safe across threads)
+                cursor.execute(
+                    "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, lang INTEGER NOT NULL CHECK (lang IN (0, 1)) )"
+                )
+                conn.commit()
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
 
-    def create_user(self, username, lang):
-        # Use parameterized queries to avoid SQL injection and check existence properly
-        self.cursor.execute("SELECT 1 FROM users WHERE username = ?", (username,)) # pyright: ignore[reportOptionalMemberAccess]
-        if self.cursor.fetchone(): # type: ignore
-            return "User already exists"
-        self.cursor.execute("INSERT INTO users (username, lang) VALUES (?, ?)", (username, int(lang))) # type: ignore
-        self.conn.commit() # type: ignore
-        return "User created"
+    def create_user(self, username: str, lang: int) -> str:
+        """
+        Create a new user if not exists. Uses its own connection per call.
+        """
+        try:
+            with sqlite3.connect(self.url, check_same_thread=False) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM users WHERE username = ?", (username,))
+                if cursor.fetchone():
+                    return "User already exists"
+                cursor.execute("INSERT INTO users (username, lang) VALUES (?, ?)", (username, int(lang)))
+                conn.commit()
+                return "User created"
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return "Error"
 
-    def get_user_by_username(self, username):
-        self.cursor.execute("SELECT * FROM users WHERE username = ?", (username,)) # type: ignore
-        return self.cursor.fetchone()# type: ignore
-    
-    def get_user_lang(self,username):
-        self.cursor.execute("SELECT lang FROM users WHERE username = ?",(username,))# type: ignore
-        return self.cursor.fetchone()# type: ignore 
-    
-    def update_user_lang(self,username,lang):
-        self.cursor.execute("UPDATE users SET lang = ? WHERE username = ?",(int(lang),username,))# type: ignore
-        self.conn.commit()# type: ignore 
-        return
-    
-db = Database("Database/users.db")
+    def get_user_by_username(self, username: str) -> Optional[Tuple[Any, ...]]:
+        """
+        Returns the user row as a tuple or None.
+        """
+        try:
+            with sqlite3.connect(self.url, check_same_thread=False) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+                return cursor.fetchone()
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return None
 
-db.create_database()
-# print(db.create_user("mehdi",0))  
-print(db.get_user_by_username("mehdi"))
-print(db.get_user_lang("mehdi"))
-print(db.update_user_lang("mehdi",0))
-print(db.get_user_by_username("mehdi"))
+    def get_user_lang(self, username: str) -> Optional[int]:
+        """
+        Returns the `lang` value for the given username or None if not found.
+        """
+        try:
+            with sqlite3.connect(self.url, check_same_thread=False) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT lang FROM users WHERE username = ?", (username,))
+                row = cursor.fetchone()
+                return row[0] if row else None
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return None
+
+    def change_user_lang(self, username: str) -> int:
+        """
+        Toggles the user's lang between 0 and 1. Returns True on success, False otherwise.
+        """
+        try:
+            with sqlite3.connect(self.url, check_same_thread=False) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT lang FROM users WHERE username = ?", (username,))
+                row = cursor.fetchone()
+                if not row:
+                    return False
+                oldLang = row[0]
+                newLang = 1 if oldLang == 0 else 0
+                cursor.execute("UPDATE users SET lang = ? WHERE username = ?", (int(newLang), username))
+                conn.commit()
+                return newLang
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return False
+

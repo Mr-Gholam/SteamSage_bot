@@ -1,11 +1,6 @@
 from gtts import gTTS, lang
 import os
 import subprocess
-
-import subprocess
-
-import subprocess
-import os
 import tempfile
 
 def speed_up_audio(input_path, speed=1.5):
@@ -51,17 +46,20 @@ def speed_up_audio(input_path, speed=1.5):
 
 
 
-def create_tts(text,username,messageid):
+def create_tts(text,username,messageid,lang):
     language = "pa"  
+    if lang == 1 :
+        language = "fr"
     slow_speed = False  
     tts_object = gTTS(text=text, lang=language, slow=slow_speed)
     filename = "TTS/"+username+"_"+str(messageid)+".mp3"
     tts_object.save(filename)
 
-    speed_up_audio(filename,1.25)
+    # speed_up_audio(filename,1.1)
 
     return filename
 
 def delete_tts(url):
     os.remove(url)
+
 
