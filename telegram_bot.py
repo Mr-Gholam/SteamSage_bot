@@ -40,7 +40,6 @@ def send_dota_stat(msg):
         try:
             with open(result[1], "rb") as photo:
                 bot.send_photo(msg.chat.id, photo, caption=result[0])
-                delete_img(result[1])
         except FileNotFoundError:
             bot.reply_to(
                 msg.chat.id,
@@ -48,6 +47,7 @@ def send_dota_stat(msg):
             )
         except Exception as e:
             bot.reply_to(msg.chat.id, f"An error occurred while sending the photo: {e}")
+        delete_img(result[1])
     else:
         bot.send_message(msg.chat.id, result[0])
 
@@ -90,6 +90,9 @@ def talk_to_admin(msg):
     bot.send_message(msg.chat.id, f"You are sending a message to admin",reply_markup= types.ForceReply(selective=False))
 
 
+@bot.message_handler(commands=["contribute"])
+def contribute(msg):
+    bot.send_message(msg.chat.id, 'To contribute to this project, please visit the <a href="https://github.com/Mr-Gholam/SteamSage_bot">GitHub page</a>.',parse_mode='HTML')
 
 
 
