@@ -5,17 +5,18 @@ import telebot
 from telebot import types
 import asyncio
 
-from Scripts import send_dota2_stat, delete_img,lyrics,create_tts,delete_tts,Database,chat_with_langchain,translator_function
+from Scripts import send_dota2_stat, delete_img,lyrics,create_tts,delete_tts,Database
 
 db = Database("Database/users.db")
 db.create_database()
 
 
 load_dotenv()
-telegram_api = os.getenv("TELEGRAM_API")
-if telegram_api is None:
+TELEGRAM_API = os.getenv("TELEGRAM_API")
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+if TELEGRAM_API is None:
     raise ValueError("TELEGRAM_API environment variable is not set.")
-bot = telebot.TeleBot(telegram_api)
+bot = telebot.TeleBot(TELEGRAM_API)
 
 
 @bot.message_handler(commands=["start"])
@@ -39,6 +40,7 @@ def send_dota_stat(msg):
         try:
             with open(result[1], "rb") as photo:
                 bot.send_photo(msg.chat.id, photo, caption=result[0])
+                delete_img(result[1])
         except FileNotFoundError:
             bot.reply_to(
                 msg.chat.id,
@@ -81,27 +83,44 @@ def change_lang(msg):
            response = "Language has been changed from French to English"
         bot.send_message(msg.chat.id,response)
     except Exception as e:
-        bot.send_message(msg.chat.id, f"An error occurred while sending the music: {e}")
+        bot.send_message(msg.chat.id, f"An error occurred while changing Language: {e}")
+
+@bot.message_handler(commands=["admin"])
+def talk_to_admin(msg):
+    bot.send_message(msg.chat.id, f"You are sending a message to admin",reply_markup= types.ForceReply(selective=False))
 
 
-@bot.message_handler(func=lambda m: True)
+
+
+
+@bot.message_handler(func=lambda message: message.reply_to_message is not None and message.reply_to_message.text == "You are sending a message to admin")
 def handle_message(msg):
-    lang = db.get_user_lang(msg.chat.username)
-    tts = types.InlineKeyboardButton('text to speech', callback_data='TTS')
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(tts)
-    reply = chat_with_langchain(msg.text)
-    if lang == 1 :
-        reply = asyncio.run(translator_function(reply))
-        bot.reply_to(
-            msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
-            reply_markup=keyboard
-        )
-    else:
-        bot.reply_to(
-            msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
-            reply_markup=keyboard
-        )
+    if ADMIN_CHAT_ID is None:
+        bot.reply_to(msg, "Admin chat id is not configured.")
+        return
+    bot.send_message(ADMIN_CHAT_ID, f"User:@{msg.chat.username}\nMessage:{msg.text}")
+    bot.reply_to(msg,"Admin received your message")
+
+
+
+# @bot.message_handler(func=lambda m: True)
+# def handle_message(msg):
+#     lang = db.get_user_lang(msg.chat.username)
+#     tts = types.InlineKeyboardButton('text to speech', callback_data='TTS')
+#     keyboard = types.InlineKeyboardMarkup()
+#     keyboard.add(tts)
+#     reply = chat_with_langchain(msg.text)
+#     if lang == 1 :
+#         reply = asyncio.run(translator_function(reply))
+#         bot.reply_to(
+#             msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
+#             reply_markup=keyboard
+#         )
+#     else:
+#         bot.reply_to(
+#             msg, reply if reply is not None else "Sorry, I couldn't generate a response.",
+#             reply_markup=keyboard
+#         )
 
 
 @bot.callback_query_handler(func=lambda call: True)
